@@ -56,7 +56,6 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
     return bytes_written;
 }
 
-
 void spng_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
 	const unsigned char pngid[8]={    0x89,0x50,0x4e,0x47,0xd,0xa,0x1a,0xa};
 	const unsigned char ihdrid[4]={    0x49,0x48,0x44,0x52};
@@ -103,9 +102,7 @@ void spng_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
 
 
 int spng_pixel_is_unique(struct SPNG_PIXEL plte[256],unsigned char * r, unsigned char * g, unsigned char * b,unsigned char * a,int len){
-	for(int i = 0; i<len;i++){
-		if((plte[i].r == (*r)) && (plte[i].g == (*g)) &&(plte[i].b == (*b)) &&(plte[i].a == (*a)) )return 0;  
-	}
+	for(int i = 0; i<len;i++)if((plte[i].r == (*r)) && (plte[i].g == (*g)) &&(plte[i].b == (*b)) &&(plte[i].a == (*a)) )return 0;  
 	return 1;
 }
 
@@ -118,11 +115,6 @@ void spng_plte_insert(struct SPNG_PIXEL plte[256],int plte_i,unsigned char r,uns
 
 int spng_search_plte_pixel(struct SPNG_PIXEL plte[256],unsigned char r,unsigned char g,unsigned char b,unsigned char a){
 	for(int i = 0; i < 256;i++){
-		/*if(plte[i].r != r) continue;
-		else if(plte[i].g != g) continue;
-		else if(plte[i].b != b) continue;
-		else if(plte[i].a != a) continue;
-		else return i;*/
 		if(plte[i].r == r && plte[i].g == g && plte[i].b == b && plte[i].a == a)return i;
 	}
 	return -1; // doesnt exist
@@ -138,19 +130,19 @@ int SPNG_write(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_b
 	unsigned int scanlinelength = spnginf->width * spnginf->bytespp+1;
 	unsigned char * filtered_idat_buffer=(unsigned char *)malloc(spnginf->height * scanlinelength);
 	int j=0;
-	for(int i = 0;i < spnginf->height * (scanlinelength-1); i++){
-		if(j % scanlinelength == 0 || j == 0){
-			filtered_idat_buffer[j] = 0;
-			j++;
+		for(int i = 0;i < spnginf->height * (scanlinelength-1); i++){
+			if(j % scanlinelength == 0 || j == 0){
+				filtered_idat_buffer[j] = 0;
+				j++;
+			}
+		filtered_idat_buffer[j] = in_pix_buf[i];
+		j++;
 		}
-	filtered_idat_buffer[j] = in_pix_buf[i];
-	j++;
-}
-spng_deflate(filtered_idat_buffer,scanlinelength,spnginf->height,spnginf->width,4096,8,fp);
-spng_write_end(fp);
-free(filtered_idat_buffer);
-fclose(fp);
-return 0;
+	spng_deflate(filtered_idat_buffer,scanlinelength,spnginf->height,spnginf->width,4096,8,fp);
+	spng_write_end(fp);
+	free(filtered_idat_buffer);
+	fclose(fp);
+	return 0;
 }
 
 void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_size){
@@ -169,8 +161,8 @@ void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_siz
 		fwrite(b, 1, 3, fp);
 		png_crc = crc32(png_crc, b, 3);
 	}
-	    png_crc = __builtin_bswap32(png_crc);
-		fwrite(&png_crc, 1, 4, fp);
+	png_crc = __builtin_bswap32(png_crc);
+	fwrite(&png_crc, 1, 4, fp);
 }
 
 void spng_write_trns(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int trns_size){
@@ -222,7 +214,6 @@ int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* 
 			plte_i++;
 		}
 	}
-
 	FILE * fp = fopen(filename,"wb");
 	unsigned char tempclr=spnginf->clr;
 	unsigned char tempbytepp=spnginf->bytespp;
@@ -244,6 +235,7 @@ int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* 
 		g = in_pix_buf[i+1];
 		b = in_pix_buf[i+2];
 		a = 255;
+		// returns an index and saves it in new indexed pixel buffer
 		new_indexed_pixel_buffer[j] = spng_search_plte_pixel(plte,r,g,b,a);
 		j++;
 	}	

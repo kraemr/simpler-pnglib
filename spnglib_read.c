@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdio.h>
 
 #define SPNG_NOFILTER 0
 #define SPNG_SUB 1
@@ -18,8 +18,7 @@ unsigned int g_spng_bytes_rwritten;
 unsigned char g_spng_IDAT_ID[]={0x49,0x44,0x41,0x54};
 unsigned char g_spng_PLTE_ID[]={0x50,0x4c,0x54,0x45};
 unsigned char g_spng_TRNS_ID[]={0x74,0x52,0x4e,0x53};
-	unsigned char g_spng_PNG_ID[8]={0x89,0x50,0x4e,0x47,0xd,0xa,0x1a,0xa};
-
+unsigned char g_spng_PNG_ID[8]={0x89,0x50,0x4e,0x47,0xd,0xa,0x1a,0xa};
 unsigned char g_spng_is_little_endian;
 unsigned char * g_spng_IDAT_BUFFER_unfiltered;
 
@@ -37,15 +36,10 @@ unsigned char spng_cpu_get_is_little_endian(){
 	return (*(char*)&num);
 }
 
-
-
-void spng_memcpy(unsigned char* dest,unsigned char* src,unsigned int srcoffset,int nbytes){
-	for(int i = 0; i < nbytes;i++)dest[i] = src[i+srcoffset];
-}
-
 void spng_change_endian(unsigned int * n){
 *n = (*n >> 24) | ((*n >> 8) & 0x0000ff00) | ((*n<<8) & 0x00ff0000) | (*n << 24);
 }
+
 //calculates size of the resulting pixelbuffer
 void spng_get_size(struct SPNG_INFO* spnginf){
 	spnginf->size = (*spnginf).width * (*spnginf).height  * (*spnginf).bytespp;
@@ -181,7 +175,6 @@ void spng_get_plte(char * fname,int fpos){
 	g_spng_plte_pixels = (struct SPNG_PIXEL*)malloc(len/3 * sizeof(struct SPNG_PIXEL));
 	g_spng_plte_is_allocated = 1;
 	g_spng_bytes_rwritten = fread(plte_buffer,1,len,fp);
-
 	int limit = 30000;
 	  while(!feof(fp) && ftell(fp)<30000){
         g_spng_bytes_rwritten = fread(b,1,1,fp);
@@ -196,7 +189,6 @@ void spng_get_plte(char * fname,int fpos){
         }
     }
 	g_spng_bytes_rwritten = fread(trns_buffer,1,len,fp);
-	
 	unsigned short trns_i = 0;
 	unsigned short plte_i=0;
 	for(unsigned short i = 2; i < g_spng_plte_len*3;i+=3){
@@ -234,6 +226,7 @@ void spng_undo_paeth(struct SPNG_INFO* spnginf,unsigned int pos,unsigned int len
 	unsigned int last_scan_curr_i=pos-len_nofilter;// last scanlines current index
 	unsigned int last_block_i=pos; // previous block of the current index in current line
 	unsigned int last_scan_last_block_i=pos-len_nofilter; // the previous block of the current index in the previous line
+
 	for(unsigned int i=pos; i<pos+len_nofilter; i+=spnginf->bytespp){
 		if(i!=pos){
 			for(int j=i;j<i+spnginf->bytespp;j++){
@@ -257,7 +250,9 @@ void spng_undo_paeth(struct SPNG_INFO* spnginf,unsigned int pos,unsigned int len
 
 // uses SSE XMM instructions to undo sub faster
 void _spng_undo_sub_XMM(){
+
 }
+
 // no xmm
 void spng_undo_sub(struct SPNG_INFO* spnginf,unsigned int len_nofilter,unsigned int pos){
 	unsigned int k;
@@ -309,9 +304,12 @@ void spng_undo_filters(struct SPNG_INFO* spnginf){
 	for(i = 0;i<len*spnginf->height;i+=len,j++){
 		FILTER_VALUES[j] = g_spng_IDAT_BUFFER_unfiltered[i];	
 	} // after extracting the filter values remove them from g_spng_IDAT_BUFFER_unfiltered
+
 	i=0;
 	j=0;
+	
 	int k =0;
+
 	for(i=0;i<len*spnginf->height; i+=len, j+=len_nofilter){
 	memmove(&g_spng_IDAT_BUFFER_unfiltered[i-k],&g_spng_IDAT_BUFFER_unfiltered[i+1],len_nofilter); 
 	k++;
@@ -319,6 +317,7 @@ void spng_undo_filters(struct SPNG_INFO* spnginf){
 	}
 	j=0;
 	i=0;
+	
 	for(i=0;i<spnginf->height;i++,j+=len_nofilter){
 		switch (FILTER_VALUES[i]) { //filter value is at this position
 			case 0:;break; //NOFILTER Do nothing
@@ -351,7 +350,6 @@ void SPNG_get_pixels(unsigned char** pixelbuffer){
 // copies the internal buffer to the given pixelbuffer and allocates it by itself
 // DO NOT ALLOCATE THE BUFFER BEFORE PASSING IT HERE
 void SPNG_get_pixels_srgb(struct SPNG_INFO* spnginf,unsigned char** pixelbuffer,unsigned char withAlpha){
-	//spng_alloc_buffer(&g_spng_spnginf,pixelbuffer);
 	int j = withAlpha ? 3 : 2;
 	//internally rgb and requested rgb
 	if(g_spng_spnginf.clr == 2 && withAlpha == 0){// img is in the same format as requested
@@ -499,13 +497,11 @@ void SPNG_get_pixels_greyscale(struct SPNG_INFO* spnginf,unsigned char** pixelbu
 	//convert from greyscale to greyscale alpha
 	if(g_spng_spnginf.clr == 0 && withAlpha == 1){
 		for(int i = 0; i< g_spng_spnginf.width*g_spng_spnginf.height;i++){
-			if(withAlpha){
 				(*pixelbuffer)[j-1] = g_spng_IDAT_BUFFER_unfiltered[i];
 				(*pixelbuffer)[j-1] = g_spng_IDAT_BUFFER_unfiltered[i];
 				(*pixelbuffer)[j-1] = g_spng_IDAT_BUFFER_unfiltered[i];
 				(*pixelbuffer)[j] = 255;
 				j+=2;
-			}
 		}
 		return;
 	}
@@ -514,12 +510,10 @@ void SPNG_get_pixels_greyscale(struct SPNG_INFO* spnginf,unsigned char** pixelbu
 		for(int i = 2; i< g_spng_spnginf.width*g_spng_spnginf.height*3;i+=3){
 			if(withAlpha){
 				(*pixelbuffer)[j-1] = spng_calculate_greyscale(g_spng_IDAT_BUFFER_unfiltered[i-2],g_spng_IDAT_BUFFER_unfiltered[i-1],g_spng_IDAT_BUFFER_unfiltered[i]);
-				//printf("%d ",(*pixelbuffer)[j-1]);
 				(*pixelbuffer)[j] = 255;
 				j+=2;
 			}else{
 				(*pixelbuffer)[j] = spng_calculate_greyscale(g_spng_IDAT_BUFFER_unfiltered[i-2],g_spng_IDAT_BUFFER_unfiltered[i-1],g_spng_IDAT_BUFFER_unfiltered[i]);
-							//	printf("%d ",(*pixelbuffer)[j]);
 				j++;
 			}
 		}
@@ -532,8 +526,9 @@ void SPNG_get_pixels_greyscale(struct SPNG_INFO* spnginf,unsigned char** pixelbu
 				(*pixelbuffer)[j-1] = spng_calculate_greyscale(g_spng_IDAT_BUFFER_unfiltered[i-3],g_spng_IDAT_BUFFER_unfiltered[i-2],g_spng_IDAT_BUFFER_unfiltered[i-1]);
 				(*pixelbuffer)[j] = g_spng_IDAT_BUFFER_unfiltered[i];
 				j+=2;
-			}else{
-				(*pixelbuffer)[j] = spng_calculate_greyscale(g_spng_IDAT_BUFFER_unfiltered[i-2],g_spng_IDAT_BUFFER_unfiltered[i-1],g_spng_IDAT_BUFFER_unfiltered[i]);
+			}
+			else{
+				(*pixelbuffer)[j] = spng_calculate_greyscale(g_spng_IDAT_BUFFER_unfiltered[i-3],g_spng_IDAT_BUFFER_unfiltered[i-2],g_spng_IDAT_BUFFER_unfiltered[i-1]);
 				j++;
 			}
 		}
@@ -553,16 +548,12 @@ void SPNG_get_pixels_greyscale(struct SPNG_INFO* spnginf,unsigned char** pixelbu
 int SPNG_read(char * filename,struct SPNG_INFO* spnginf){
 	if(filename == NULL) return SPNG_FILE_NOT_FOUND;
 	FILE * fp = fopen(filename,"rb");
-	if(fp == NULL){ 
-		return SPNG_FILE_NOT_FOUND;
-	}
+	if(fp == NULL)return SPNG_FILE_NOT_FOUND;
 	if(g_spng_is_allocated==1) free(g_spng_IDAT_BUFFER_unfiltered);
 	int inf = SPNG_get_spnginfo_from_file(filename,&g_spng_spnginf);
 	if(inf < 0) return inf;
-
 	spng_read_IDAT(fp, &g_spng_spnginf, inf);
 	spng_undo_filters(&g_spng_spnginf);
-	//indexed
 	if(g_spng_spnginf.clr == 3){
 	if(g_spng_plte_is_allocated == 1) free(g_spng_plte_pixels);
 	spng_get_plte(filename,inf);

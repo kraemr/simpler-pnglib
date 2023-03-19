@@ -1,7 +1,9 @@
 
+#include <SDL2/SDL_sensor.h>
 #define SPNG_ERROR -1
 #define SPNG_FILE_NOT_FOUND -2
 #define SPNG_NOT_ALLOCATED -3
+#define SPNG_NULL -4
 #define SPNG_SUCCESS 0
 #define SPNG_WRITTEN_AS_INDEXED 10
 
@@ -11,6 +13,17 @@ unsigned char g;
 unsigned char b;
 unsigned char a;
 };
+
+struct SPNG_METADATA{
+    unsigned char * title;
+    unsigned int title_len;
+    unsigned char * author;
+    unsigned int author_len;
+    unsigned char * description;
+    unsigned int description_len;
+};
+
+
 struct SPNG_INFO {
 unsigned int width; 
 unsigned int height;
@@ -34,3 +47,4 @@ void SPNG_exit();// deallocates internal Buffer call this when you are finished 
 void SPNG_get_pixels_srgb(struct SPNG_INFO* spnginf,unsigned char** pixelbuffer,unsigned char withAlpha);
 int SPNG_get_spnginfo(struct SPNG_INFO* spnginf);
 int SPNG_get_spnginfo_from_file(char * filename,struct SPNG_INFO* spnginf);
+int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata);
