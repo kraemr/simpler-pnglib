@@ -167,12 +167,11 @@ void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_siz
 
 void spng_write_trns(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int trns_size){
 	unsigned int png_crc= crc32(0, Z_NULL, 0);
-	unsigned char Trns_id[]={0x74,0x52 ,0x4E ,0x53};
-	png_crc = crc32(png_crc, Trns_id, 4);
+	png_crc = crc32(png_crc, g_spng_TRNS_ID, 4);
 	unsigned int temp_trns_size = trns_size;
 	temp_trns_size = (temp_trns_size >> 24) | ((temp_trns_size >> 8) & 0x0000ff00) | ((temp_trns_size<<8) & 0x00ff0000) | (temp_trns_size << 24); //change endianness
 	fwrite(&temp_trns_size, 1, 4, fp);
-	fwrite(Trns_id,1, 4, fp);
+	fwrite(g_spng_TRNS_ID,1, 4, fp);
 	for(int i = 0; i < trns_size;i++){
 		fputc(plte[i].a,fp);
 		png_crc = crc32(png_crc, &plte[i].a, 1);

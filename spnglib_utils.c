@@ -1,10 +1,9 @@
 #include "include/spnglib.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+extern void spng_change_endian(unsigned int * n);
 
-void spng_change_endian(unsigned int * n){
-*n = (*n >> 24) | ((*n >> 8) & 0x0000ff00) | ((*n<<8) & 0x00ff0000) | (*n << 24);
-}
 
 void spng_metadata_deflate_ztxt(unsigned char * ztxt_str ,char * out_str,unsigned int * out_len){
 
@@ -15,12 +14,7 @@ int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata){
     FILE * fp = fopen(filename,"rb");
     if(fp == NULL) return SPNG_FILE_NOT_FOUND;
     unsigned char b[4];
-    unsigned char spng_PLTE_ID[]={0x50,0x4c,0x54,0x45};
-    unsigned char spng_TRNS_ID[]={0x74,0x52,0x4e,0x53};
-    unsigned char spng_tExT_ID[]={116,69,88,116}; //tEXT
-    unsigned char spng_zTXt_ID[]={122,84,88,116}; //zTXt
-    unsigned char IHDR_identifier[]={0x49,0x48,0x44,0x52};
-    unsigned char phys_ID[]={112,72,89,115}; //pHYs
+ 
 
     char * author_str = "Author";
     char * title_str = "Title";
@@ -28,10 +22,10 @@ int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata){
 
     while(!feof(fp)){
         fread(b,1,4,fp);
-        if(memcmp(spng_PLTE_ID,b,4) == 0 
-        || memcmp(spng_TRNS_ID,b,4) == 0 
-        || memcmp(IHDR_identifier, b, 4) == 0 
-        || memcmp(phys_ID, b,  4) == 0 ){
+        if(memcmp(g_spng_PLTE_ID,b,4) == 0 
+        || memcmp(g_spng_TRNS_ID,b,4) == 0 
+        || memcmp(g_spng_IHDR_ID, b, 4) == 0 
+        || memcmp(g_spng_phys_ID, b,  4) == 0 ){
 
             fseek(fp,-8,SEEK_CUR);
             unsigned int chnklen = 0;
@@ -42,7 +36,7 @@ int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata){
             fseek(fp,4,SEEK_CUR);
             
         }
-        else if(memcmp(spng_tExT_ID,b,4) == 0){
+        else if(memcmp(g_spng_tExT_ID,b,4) == 0){
             fseek(fp,-8,SEEK_CUR);
             unsigned int chnklen = 0;
             fread(&chnklen,1,4,fp);
@@ -63,7 +57,7 @@ int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata){
                 spng_metadata->author[chnklen] = '\0';
             }
         }
-        else if(memcmp(spng_zTXt_ID,b,4) == 1){
+        else if(memcmp(g_spng_zTXt_ID,b,4) == 1){
 
         }
     }
@@ -71,4 +65,17 @@ int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata){
 
 
     return SPNG_SUCCESS;
+}
+
+
+int spng_inflate_metadata(){
+    return 0;
+}
+
+
+int SPNG_write_metadata(char * filename,struct SPNG_METADATA spngmeta){
+// Seek for an already existing file to the end of ancillary ids after 
+
+
+return 0;
 }

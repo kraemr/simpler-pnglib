@@ -1,5 +1,6 @@
 
-#include <SDL2/SDL_sensor.h>
+#include "globals.h"
+
 #define SPNG_ERROR -1
 #define SPNG_FILE_NOT_FOUND -2
 #define SPNG_NOT_ALLOCATED -3
