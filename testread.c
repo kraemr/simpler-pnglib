@@ -11,16 +11,11 @@ int main(){
 //    float timeElapsed = endTime - startTime;
 //    printf("%f",timeElapsed);
 /* Do work */
-
-
-
     int inf =  SPNG_read("Testimage.png",&spnginf);
-
-  
     SPNG_get_pixels(&ff);
     SPNG_exit();
     //printf("%d",inf);
-    //SPNG_write("out.png", &spnginf, ff);
+   // SPNG_write("out.png", &spnginf, ff);
     
     
     free(ff);

@@ -1,6 +1,6 @@
 #include "include/spnglib.h"
-#include "include/zconf.h"
-#include "include/zlib.h"
+#include "include/zconf-ng.h"
+#include "include/zlib-ng.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,13 +19,13 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
 {
     unsigned char out[blocksize];
     int e = 0;
-    z_stream defstream;
+    zng_stream defstream;
     defstream.zalloc = 0;
     defstream.zfree = 0;
     defstream.opaque = 0;
     defstream.next_in = (Bytef* )t;
     defstream.avail_in = (height*ScanLineLen);
-    deflateInit(&defstream, Z_DEFLATED);
+    zng_deflateInit(&defstream, Z_DEFLATED);
 	unsigned char * png_crc_buf;
     unsigned long bytes_written=0;
 	const unsigned char IDAT_ID[]={0x49,0x44,0x41,0x54};
@@ -34,7 +34,7 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
         unsigned int have; // is also chnk length
         defstream.avail_out = blocksize;
         defstream.next_out = out;
-        e = deflate(&defstream, Z_FINISH);
+        e = zng_deflate(&defstream, Z_FINISH);
         have = blocksize - defstream.avail_out;
 		unsigned int Chunk_length = have;
     	Chunk_length = __builtin_bswap32(Chunk_length);
@@ -46,25 +46,23 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
           png_crc_buf[i+4] = out[i]; 
         }
         memcpy(&png_crc_buf[0], IDAT_ID, 4);
-        unsigned long  crc_val = crc32(0L, Z_NULL, 0);
-        crc_val = crc32(crc_val, (const unsigned char*)png_crc_buf, have+4);        
+        unsigned long  crc_val = zng_crc32(0L, Z_NULL, 0);
+        crc_val = zng_crc32(crc_val, (const unsigned char*)png_crc_buf, have+4);        
         crc_val = __builtin_bswap32(crc_val);
         fwrite(&crc_val,1,4,fp);
         free(png_crc_buf);
     } while (defstream.avail_out == 0);
-    deflateEnd(&defstream);
+    zng_deflateEnd(&defstream);
     return bytes_written;
 }
 
 void spng_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
-	const unsigned char pngid[8]={    0x89,0x50,0x4e,0x47,0xd,0xa,0x1a,0xa};
-	const unsigned char ihdrid[4]={    0x49,0x48,0x44,0x52};
 	const  unsigned char standard_ihdr_length[]={0x00,0x00,0x00,0x0d};
 	const unsigned int zeroes [4]={0,0,0,0};
 	unsigned int png_crc = 0;
-	fwrite( pngid, 1, 8, fp);
+	fwrite( g_spng_PNG_ID, 1, 8, fp);
 	fwrite(standard_ihdr_length, 1,4,fp);
-	fwrite(ihdrid, 1,4,fp);
+	fwrite(g_spng_IHDR_ID, 1,4,fp);
 	unsigned int w = spnginf->width;
 	unsigned int h = spnginf->height;
 	w = (w >> 24) | ((w >> 8) & 0x0000ff00) | ((w<<8) & 0x00ff0000) | (w << 24);
@@ -75,10 +73,10 @@ void spng_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
 	fwrite(&spnginf->clr, 1, 1, fp);	
 	fwrite(zeroes, 1, 3, fp);
 	unsigned char ihdr_crc_buf[17];
-	ihdr_crc_buf[0] = ihdrid[0];
-	ihdr_crc_buf[1] = ihdrid[1];
-	ihdr_crc_buf[2] = ihdrid[2];
-	ihdr_crc_buf[3] = ihdrid[3];
+	ihdr_crc_buf[0] = g_spng_IHDR_ID[0];
+	ihdr_crc_buf[1] = g_spng_IHDR_ID[1];
+	ihdr_crc_buf[2] = g_spng_IHDR_ID[2];
+	ihdr_crc_buf[3] = g_spng_IHDR_ID[3];
     // gets the individual bytes out of the 4 bytes value
 	ihdr_crc_buf[4] = (w & 0x000000ffUL);
 	ihdr_crc_buf[5] = (w & 0x0000ff00UL) >> 8;
@@ -93,8 +91,8 @@ void spng_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
 	ihdr_crc_buf[14] = 0;
 	ihdr_crc_buf[15] = 0;
 	ihdr_crc_buf[16] = 0;
-	png_crc = crc32(0,Z_NULL,0);
-	png_crc = crc32(png_crc,ihdr_crc_buf,17);
+	png_crc = zng_crc32(0,Z_NULL,0);
+	png_crc = zng_crc32(png_crc,ihdr_crc_buf,17);
 	png_crc = __builtin_bswap32(png_crc);
 	fwrite(&png_crc, 1,4, fp);
 }
@@ -122,6 +120,9 @@ int spng_search_plte_pixel(struct SPNG_PIXEL plte[256],unsigned char r,unsigned 
 
 // needs a spnginf with proper width, height and clr corresponding to the passed buffer
 int SPNG_write(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf){
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_start();
+	#endif
 	if(filename == NULL){
 		return -1;
 	}
@@ -138,18 +139,21 @@ int SPNG_write(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_b
 		filtered_idat_buffer[j] = in_pix_buf[i];
 		j++;
 		}
-	spng_deflate(filtered_idat_buffer,scanlinelength,spnginf->height,spnginf->width,4096,8,fp);
+	spng_deflate(filtered_idat_buffer,scanlinelength,spnginf->height,spnginf->width,16384,8,fp);
 	spng_write_end(fp);
 	free(filtered_idat_buffer);
 	fclose(fp);
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_end("write file");
+	#endif
 	return 0;
 }
 
 void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_size){
 	unsigned char b[3];
 	unsigned char PLTE_identifier[]={0x50,0x4c,0x54,0x45   };
-	unsigned int png_crc= crc32(0, Z_NULL, 0);
-	png_crc = crc32(png_crc, PLTE_identifier, 4);
+	unsigned int png_crc= zng_crc32(0, Z_NULL, 0);
+	png_crc = zng_crc32(png_crc, PLTE_identifier, 4);
 	unsigned int temp_plte_size = plte_size*3;
 	temp_plte_size = (temp_plte_size >> 24) | ((temp_plte_size >> 8) & 0x0000ff00) | ((temp_plte_size<<8) & 0x00ff0000) | (temp_plte_size << 24); //change endianness
 	fwrite(&temp_plte_size,1,4,fp);
@@ -159,22 +163,22 @@ void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_siz
 		b[1] = plte[i].g;
 		b[2] = plte[i].b;
 		fwrite(b, 1, 3, fp);
-		png_crc = crc32(png_crc, b, 3);
+		png_crc = zng_crc32(png_crc, b, 3);
 	}
 	png_crc = __builtin_bswap32(png_crc);
 	fwrite(&png_crc, 1, 4, fp);
 }
 
 void spng_write_trns(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int trns_size){
-	unsigned int png_crc= crc32(0, Z_NULL, 0);
-	png_crc = crc32(png_crc, g_spng_TRNS_ID, 4);
+	unsigned int png_crc= zng_crc32(0, Z_NULL, 0);
+	png_crc = zng_crc32(png_crc, g_spng_TRNS_ID, 4);
 	unsigned int temp_trns_size = trns_size;
 	temp_trns_size = (temp_trns_size >> 24) | ((temp_trns_size >> 8) & 0x0000ff00) | ((temp_trns_size<<8) & 0x00ff0000) | (temp_trns_size << 24); //change endianness
 	fwrite(&temp_trns_size, 1, 4, fp);
 	fwrite(g_spng_TRNS_ID,1, 4, fp);
 	for(int i = 0; i < trns_size;i++){
 		fputc(plte[i].a,fp);
-		png_crc = crc32(png_crc, &plte[i].a, 1);
+		png_crc = zng_crc32(png_crc, &plte[i].a, 1);
 	}
 	png_crc = __builtin_bswap32(png_crc);
 	fwrite(&png_crc, 1, 4, fp);

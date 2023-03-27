@@ -1,24 +1,25 @@
 #include "include/spnglib.h"
-#include "include/zconf.h"
 #include "include/globals.h"
-#include "include/zlib.h"
+#include "include/zconf-ng.h"
+#include "include/zlib-ng.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
-unsigned char * g_spng_IDAT_BUFFER_unfiltered;
 unsigned char * g_spng_IDAT_BUFFER;
-unsigned char g_spng_is_allocated; //keeps track if it has been Initialized by the same program
-unsigned char g_spng_plte_is_allocated; //keeps track if plte is initialized
-unsigned char g_trns_len;
-unsigned char g_spng_has_trns;
+unsigned char * g_spng_IDAT_BUFFER_unfiltered;
+unsigned int g_spng_is_allocated; //keeps track if it has been Initialized by the same program
+unsigned int g_spng_plte_is_allocated; //keeps track if plte is initialized
+unsigned int g_trns_len;
+unsigned int g_spng_has_trns;
+
 struct SPNG_INFO g_spng_spnginf; //keeps track of the currently loaded images dimensions,bytespp,clrtype ...
 struct SPNG_PIXEL* g_spng_plte_pixels;
-unsigned short g_spng_plte_len;
+unsigned int g_spng_plte_len;
+
 extern void spng_change_endian(unsigned int * n);
-
-
 // returns 1 if little endian and 0 if not 
 unsigned char spng_cpu_get_is_little_endian(){
 	int num = 1;
@@ -52,31 +53,22 @@ unsigned int spng_chunk_length(FILE * fp){
 	return size;
 }
 
-void spng_inflate(unsigned int size,struct SPNG_INFO* spnginf){
-	uLong uncompressed_size = (1+spnginf->width) * spnginf->height * spnginf->bytespp; // + 1 in width because of filter values
-	g_spng_IDAT_BUFFER_unfiltered  = malloc(uncompressed_size);
-    z_stream infstream;
-    infstream.zalloc = Z_NULL;
-    infstream.zfree = Z_NULL;
-    infstream.opaque = Z_NULL;
-    infstream.avail_in = size; // size of input
-    infstream.next_in = (Bytef *)g_spng_IDAT_BUFFER; // input char array
-	infstream.avail_out = uncompressed_size;
-	infstream.next_out = g_spng_IDAT_BUFFER_unfiltered; //same as input
-	inflateInit2(&infstream,15);
-	int e = inflate(&infstream,Z_NO_FLUSH);
-	inflateEnd(&infstream);
-	free(g_spng_IDAT_BUFFER);
-}
 
 
 void spng_read_until_IDAT(FILE * fp,struct SPNG_INFO* spnginf,unsigned char skip_anc){
 	// starts after IHDR and reads all 
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_start();
+	#endif
+
 	unsigned char b[4];
 	unsigned int chunk_len;
 	while(!feof(fp)){
 		fread(b,1,4,fp);
 		if(memcmp(b, g_spng_IDAT_ID, 4)==0){
+			#ifdef SPNGLIB_DEBUG_BENCHMARK
+				spng_bench_end("read until IDAT");
+			#endif
 			return;
 		}
 		if(memcmp(b, g_spng_tIME_ID, 4) == 0 ||
@@ -122,8 +114,27 @@ void spng_read_until_IDAT(FILE * fp,struct SPNG_INFO* spnginf,unsigned char skip
 	}
 }
 
+void spng_inflate_ng(unsigned int size,struct SPNG_INFO* spnginf){
+	g_spng_IDAT_BUFFER_unfiltered = malloc((spnginf->bytespp * spnginf->width+1) * spnginf->height);
+	zng_stream stream;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+    stream.avail_in = size;
+    stream.next_in = g_spng_IDAT_BUFFER;
+	stream.avail_out = (spnginf->bytespp * spnginf->width+1) * spnginf->height;
+	stream.next_out = g_spng_IDAT_BUFFER_unfiltered;
+	zng_inflateInit(&stream);
+	zng_inflate(&stream,Z_NO_FLUSH);
+	zng_inflateEnd(&stream);
+	free(g_spng_IDAT_BUFFER);
+}
+
 void spng_read_IDAT(FILE * fp,struct SPNG_INFO* spnginf,int start){
-	g_spng_IDAT_BUFFER = (unsigned char *)malloc(((spnginf->width * 3)+1) * spnginf->height );
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_start();
+	#endif
+	g_spng_IDAT_BUFFER = (unsigned char *)malloc(((spnginf->width * spnginf->bytespp)+1) * spnginf->height );
 	unsigned char b[4]={0};
 	fseek(fp,start,SEEK_SET);
 	spng_read_until_IDAT(fp, &g_spng_spnginf, 1);
@@ -140,7 +151,16 @@ void spng_read_IDAT(FILE * fp,struct SPNG_INFO* spnginf,int start){
 			}
 	}
 	g_spng_IDAT_BUFFER -= total_len;
-	spng_inflate(total_len,spnginf);
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_end("read IDAT");
+	#endif
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_start();
+	#endif
+	spng_inflate_ng(total_len,spnginf);
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_end("spng inflate_ng");
+	#endif
 }
 
 
@@ -148,6 +168,9 @@ void spng_read_IDAT(FILE * fp,struct SPNG_INFO* spnginf,int start){
 // returns -1 if not a png
 int SPNG_get_spnginfo_from_file(char * filename,struct SPNG_INFO* spnginf){
 // read the idhr and return info
+#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_start();
+	#endif
 	if(filename==NULL) return SPNG_ERROR;
 	FILE * fp = fopen(filename,"rb");
 	if(fp==NULL){
@@ -172,6 +195,9 @@ int SPNG_get_spnginfo_from_file(char * filename,struct SPNG_INFO* spnginf){
 	fseek(fp,7,SEEK_CUR);
 	int fpos = ftell(fp);
 	fclose(fp);
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_end("spnginfo read");
+	#endif
 	return fpos;
 }
 
@@ -225,9 +251,10 @@ void spng_get_plte(char * fname,int fpos){
         }
     }
 	g_spng_bytes_rwritten = fread(trns_buffer,1,len,fp);
-	unsigned short trns_i = 0;
-	unsigned short plte_i=0;
-	for(unsigned short i = 2; i < g_spng_plte_len*3;i+=3){
+	register unsigned int trns_i = 0;
+	register unsigned int plte_i=0;
+	unsigned int g_spng_end = g_spng_plte_len * 3;
+	for(unsigned int i = 2; i < g_spng_end;i+=3){
 		g_spng_plte_pixels[plte_i].r = plte_buffer[i-2];
 		g_spng_plte_pixels[plte_i].g = plte_buffer[i-1];
 		g_spng_plte_pixels[plte_i].b = plte_buffer[i];
@@ -246,7 +273,7 @@ void spng_get_plte(char * fname,int fpos){
 
 // used to predict next pixel 
 unsigned char spng_paeth_pred(unsigned char a,  unsigned char b, unsigned char c){
-    int  p =a + b - c;
+    register int  p =a + b - c;
     int pa = abs(p - a);
     int  pb = abs(p - b);
     int pc = abs(p - c);
@@ -257,31 +284,39 @@ unsigned char spng_paeth_pred(unsigned char a,  unsigned char b, unsigned char c
     return PR;
 }
 
+void spng_undo_paeth_avx2(){
+	
+}
+
 void spng_undo_paeth(struct SPNG_INFO* spnginf,unsigned int pos,unsigned int len_nofilter){
-	unsigned char a,b,c;
+	//register unsigned char a,b,c;
 	unsigned int last_scan_curr_i=pos-len_nofilter;// last scanlines current index
 	unsigned int last_block_i=pos; // previous block of the current index in current line
-	unsigned int last_scan_last_block_i=pos-len_nofilter; // the previous block of the current index in the previous line
+	unsigned int last_scan_last_block_i=last_scan_curr_i; // the previous block of the current index in the previous line
 	unsigned int i = pos;
 	unsigned int j = i;
+	unsigned int bytepp = spnginf->bytespp;
 
-	for(j=i; j<i + spnginf->bytespp; j++){
-			b = g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i];
-			g_spng_IDAT_BUFFER_unfiltered[j]+=spng_paeth_pred(0, b, 0);
-			last_scan_curr_i++;
+	for(; j<i + bytepp; j++){
+//				b = g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i];
+				g_spng_IDAT_BUFFER_unfiltered[j]+=spng_paeth_pred(0, g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i], 0);
+				last_scan_curr_i++;
 	}
+	i+=bytepp;
 
 	while(i<pos+len_nofilter){
-			for(j=i;j<i+spnginf->bytespp;j++){
-				a =g_spng_IDAT_BUFFER_unfiltered[last_block_i];
-				b =g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i];
-				c =g_spng_IDAT_BUFFER_unfiltered[last_scan_last_block_i];
-				g_spng_IDAT_BUFFER_unfiltered[j]+=spng_paeth_pred(a, b, c);
+			for(j=i;j<i+bytepp;j++){
+			//	a =g_spng_IDAT_BUFFER_unfiltered[last_block_i];
+			//	b =g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i];
+			//	c =g_spng_IDAT_BUFFER_unfiltered[last_scan_last_block_i];
+				g_spng_IDAT_BUFFER_unfiltered[j]+=spng_paeth_pred(g_spng_IDAT_BUFFER_unfiltered[last_block_i], g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i], g_spng_IDAT_BUFFER_unfiltered[last_scan_last_block_i]);
 				last_block_i++;
 				last_scan_last_block_i++;
 				last_scan_curr_i++;
 			}
-			i+=spnginf->bytespp;
+		
+	
+		i+=bytepp;
 	}
 }
 
@@ -298,8 +333,6 @@ void spng_undo_sub(struct SPNG_INFO* spnginf,unsigned int len_nofilter,unsigned 
 	//}
 	}
 }
-
-
 void spng_undo_up(unsigned int len_nofilter,unsigned int pos){
 	if(pos==0)return; // dont do anything as adding 0's wont make a difference anyway
 	unsigned int j = 0;
@@ -308,68 +341,89 @@ void spng_undo_up(unsigned int len_nofilter,unsigned int pos){
 	}
 }
 
-
 void spng_undo_avg(struct SPNG_INFO* spnginf,unsigned int len_nofilter,unsigned int pos){
 	unsigned int a,b;
 	unsigned int lastblock_i=pos;
 	unsigned int last_scan_current_i=pos-len_nofilter;
-	int i = pos;
-	for(int j=i;j<i+spnginf->bytespp ; j++){
-				b = g_spng_IDAT_BUFFER_unfiltered[last_scan_current_i];
-				last_scan_current_i++;
-				g_spng_IDAT_BUFFER_unfiltered[j]+=(b/2);
-	}
+	unsigned int i = pos;
+	unsigned int j=i;
 	for(;i< pos+len_nofilter;i+=spnginf->bytespp){
-			for(int j=i;j<i+spnginf->bytespp ; j++){ 
+		if(i!=pos){
+			for(j=i;j<i+spnginf->bytespp ; ++j){ 
 				a = g_spng_IDAT_BUFFER_unfiltered[lastblock_i];
 				b = g_spng_IDAT_BUFFER_unfiltered[last_scan_current_i];
 				last_scan_current_i++;
 				lastblock_i++;
 				g_spng_IDAT_BUFFER_unfiltered[j]+=((a+b)/2);
 			}
+		}else{
+			for(j=i;j<i+spnginf->bytespp ; ++j){
+				b = g_spng_IDAT_BUFFER_unfiltered[last_scan_current_i];
+				last_scan_current_i++;
+				g_spng_IDAT_BUFFER_unfiltered[j]+=(b/2);
+		}
+		}
 		
 	}
 }
 //TODO: all of the unfiltering inplace
 void spng_undo_filters(struct SPNG_INFO* spnginf){
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_start();
+	#endif
 	unsigned int len = 1+(spnginf->width) * spnginf->bytespp;
 	unsigned int len_nofilter = len-1;
 	unsigned int i=0 , j = 0;
 	unsigned char FILTER_VALUES[16384]={0};
-	for(i = 0;i<len*spnginf->height;i+=len,j++){
+	unsigned int buffer_size = len*spnginf->height;
+	for(;i<buffer_size;i+=len,++j){
 		FILTER_VALUES[j] = g_spng_IDAT_BUFFER_unfiltered[i];	
 	} // after extracting the filter values remove them from g_spng_IDAT_BUFFER_unfiltered
 
 	i=0;
-	j=0;
-	
-	int k =0;
+	j=i;
+	unsigned int k =i;
 
-	for(i=0;i<len*spnginf->height; i+=len, j+=len_nofilter){
+	for(i=0;i<buffer_size; i+=len, j+=len_nofilter){
 	memmove(&g_spng_IDAT_BUFFER_unfiltered[i-k],&g_spng_IDAT_BUFFER_unfiltered[i+1],len_nofilter); 
-	k++;
+	++k;
 	// move memory of an offset of 1(skipping the filter) into the memory section of the filter
 	}
 	j=0;
 	i=0;
-	
-	for(i=0;i<spnginf->height;i++,j+=len_nofilter){
+	for(;i<spnginf->height;++i,j+=len_nofilter){
 		switch (FILTER_VALUES[i]) { //filter value is at this position
 			case 0:
-			//printf("NOFILTER\n");
-			;break; //NOFILTER Do nothing
+			#ifdef SPNGLIB_DEBUG_BENCHMARK
+				++NOFILTER_COUNT;
+			#endif
+			continue;break; //NOFILTER Do nothing
 			case 1:
-			//printf("SUB\n");
+			#ifdef SPNGLIB_DEBUG_BENCHMARK
+				++SUB_COUNT;
+			#endif
 			spng_undo_sub(spnginf, len_nofilter, j);break; //SUB
 			case 2:
-			//printf("UP\n");
-			spng_undo_up(len_nofilter, j);
-			//spng_undo_up_mm256(len_nofilter, j);
-			break; //UP
-			case 3:spng_undo_avg(spnginf,len_nofilter, j);;break; //AVG
-			case 4:spng_undo_paeth(spnginf, j, len_nofilter);break; //PAETH
+			#ifdef SPNGLIB_DEBUG_BENCHMARK
+				++UP_COUNT;
+			#endif
+			spng_undo_up(len_nofilter, j);break; //UP
+			case 3:
+			#ifdef SPNGLIB_DEBUG_BENCHMARK
+				++AVG_COUNT;
+			#endif
+			spng_undo_avg(spnginf,len_nofilter, j);;break; //AVG
+			case 4:
+			#ifdef SPNGLIB_DEBUG_BENCHMARK
+				++PAETH_COUNT;
+			#endif
+			spng_undo_paeth(spnginf, j, len_nofilter);break; //PAETH
 		}
 	}
+	#ifdef SPNGLIB_DEBUG_BENCHMARK
+		spng_bench_end("undo filters");
+		printf("NO:%d\nSUB:%d\nUP:%d\nAVG:%d\nPAETH:%d\n",NOFILTER_COUNT,SUB_COUNT,UP_COUNT,AVG_COUNT,PAETH_COUNT);
+	#endif
 }
 
 void SPNG_exit(){
