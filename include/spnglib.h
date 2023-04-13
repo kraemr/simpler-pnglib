@@ -1,38 +1,6 @@
 
 #include "globals.h"
-
-#define SPNG_ERROR -1
-#define SPNG_FILE_NOT_FOUND -2
-#define SPNG_NOT_ALLOCATED -3
-#define SPNG_NULL -4
-#define SPNG_SUCCESS 0
-#define SPNG_WRITTEN_AS_INDEXED 10
-
-struct SPNG_PIXEL{
-unsigned char r;
-unsigned char g;
-unsigned char b;
-unsigned char a;
-};
-
-struct SPNG_METADATA{
-    unsigned char * title;
-    unsigned int title_len;
-    unsigned char * author;
-    unsigned int author_len;
-    unsigned char * description;
-    unsigned int description_len;
-};
-
-
-struct SPNG_INFO {
-unsigned int width; 
-unsigned int height;
-unsigned char bitdepth;
-unsigned char clr; //Colortype ie RGB,RGBA,greyscale..
-unsigned long size; //size of the pixelbuffer
-unsigned char bytespp;// if greyscale 1 rgb 3 greyalpha 2 rgba 4
-};
+#include <stdio.h>
 
 extern unsigned char * g_spng_IDAT_BUFFER_unfiltered;
 //reads the give image and writes dimensions, 
@@ -48,4 +16,8 @@ void SPNG_exit();// deallocates internal Buffer call this when you are finished 
 void SPNG_get_pixels_srgb(struct SPNG_INFO* spnginf,unsigned char** pixelbuffer,unsigned char withAlpha);
 int SPNG_get_spnginfo(struct SPNG_INFO* spnginf);
 int SPNG_get_spnginfo_from_file(char * filename,struct SPNG_INFO* spnginf);
-int SPNG_read_metadata(char * filename,struct SPNG_METADATA * spng_metadata);
+void SPNG_write_metadata(FILE * fp,struct SPNG_INFO* spnginf);
+int SPNG_write_authorinfo(FILE * fp,struct SPNG_AUTHORINFO spngauthinf);
+void SPNG_get_Authorinfo(struct SPNG_AUTHORINFO* spngauthinf);
+void SPNG_free_author_info(struct SPNG_AUTHORINFO* info);
+void SPNG_reset_author_info_lengths(struct SPNG_AUTHORINFO* info);
