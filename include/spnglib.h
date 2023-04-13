@@ -9,8 +9,8 @@ int SPNG_read(char * filename,struct SPNG_INFO* spnginf);
 void SPNG_get_pixels(unsigned char** pixelbuffer);//gets the pixel values without converting
 void SPNG_get_pixels_greyscale(struct SPNG_INFO* spnginf,unsigned char** pixelbuffer,unsigned char withAlpha);
 // spnginf holds the dimensions,clrtype and other things
-int SPNG_write(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf);
-int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf);
+int SPNG_write(FILE * fp,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf);
+int SPNG_write_indexed(FILE * fp,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf);
 
 void SPNG_exit();// deallocates internal Buffer call this when you are finished to avoid memleaks
 void SPNG_get_pixels_srgb(struct SPNG_INFO* spnginf,unsigned char** pixelbuffer,unsigned char withAlpha);

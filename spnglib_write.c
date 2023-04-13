@@ -55,7 +55,7 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
     return bytes_written;
 }
 
-void spng_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
+void SPNG_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
 	const  unsigned char standard_ihdr_length[]={0x00,0x00,0x00,0x0d};
 	const unsigned int zeroes [4]={0,0,0,0};
 	unsigned int png_crc = 0;
@@ -123,17 +123,14 @@ int spng_search_plte_pixel(struct SPNG_PIXEL plte[256],unsigned char r,unsigned 
 
 // needs a spnginf with proper width, height and clr corresponding to the passed buffer
 // return SPNG_NULL if no filename is given no input buffer or no SPNG_INFO is passed
-int SPNG_write(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf){
+int SPNG_write(FILE * fp,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf){
 	#ifdef SPNGLIB_DEBUG_BENCHMARK
 		spng_bench_start();
 	#endif
 	
-	if(filename == NULL || spnginf == NULL || in_pix_buf == NULL){
+	if(fp == NULL || spnginf == NULL || in_pix_buf == NULL){
 		return SPNG_NULL; 
-	}
-	
-	FILE * fp=fopen(filename,"wb");
-	spng_write_metadata(fp, spnginf);
+	}	
 	unsigned int scanlinelength = spnginf->width * spnginf->bytespp+1;
 	unsigned char * filtered_idat_buffer=(unsigned char *)malloc(spnginf->height * scanlinelength);
 	int j=0;
@@ -194,7 +191,7 @@ void spng_write_trns(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int trns_siz
 // if  it did that, then it will return 10 , which is defined as  
 // and will instead write in the original clrtype of the given SPNG_INFO
 // TODO add trns
-int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf){
+int SPNG_write_indexed(FILE * fp,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf){
 	struct SPNG_PIXEL plte[256];
 	int plte_i=0;
 	unsigned char r,g,b,a;
@@ -226,19 +223,18 @@ int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* 
 		}
 		//printf("%d\n",plte_i);
 		if(plte_i > 255){
-			return SPNG_write(filename, spnginf, in_pix_buf);
+			return SPNG_write(fp, spnginf, in_pix_buf);
 		}
 		if(spng_pixel_is_unique(plte,&r,&g,&b,&a,plte_i )==1){
 			spng_plte_insert(plte,plte_i, r, g, b, a);
 			plte_i++;
 		}
 	}
-	FILE * fp = fopen(filename,"wb");
 	unsigned char tempclr=spnginf->clr;
 	unsigned char tempbytepp=spnginf->bytespp;
 	spnginf->clr = 3;
 	spnginf->bytespp = 1;
-	spng_write_metadata(fp, spnginf);
+	SPNG_write_metadata(fp, spnginf);
 	spng_write_plte(fp,plte, plte_i);
 	if(has_trns)spng_write_trns(fp, plte,  plte_i);
 	spnginf->clr = tempclr;

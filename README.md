@@ -22,7 +22,9 @@ Then you will need to include the .h files in include in your .c or .cpp files t
     int inf =  SPNG_read("Testimage.png",&spnginf); // reads and allocates internal buffers
     // copies values to your buffer allocates it and writes the new properties into spnginf
     SPNG_get_pixels_srgb(&spnginf,&pixel_buffer,0); 
-    SPNG_write("out.png", &spnginf, pixel_buffer); // THIS writes the given pixel data
-    SPNG_exit();
+    FILE * fp = fopen("out.png","wb");
+    SPNG_write_metadata(fp, &spnginf);
+    SPNG_write(fp, &spnginf, pixel_buffer); // THIS writes the given pixel data
+    SPNG_exit(); // closes all internal buffers AND THE FILEPOINTER
     free(ff);
 </code>

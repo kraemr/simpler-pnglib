@@ -80,7 +80,7 @@ void spng_read_until_IDAT(FILE * fp,struct SPNG_INFO* spnginf,unsigned char skip
 			//fseek(fp,chunk_len,SEEK_CUR);
 			spng_read_author_title_desc(fp,chunk_len,0,&g_spng_author_info);
 			fseek(fp,4,SEEK_CUR);
-//			fseek(fp,chunk_len+4,SEEK_CUR);
+			//fseek(fp,chunk_len+4,SEEK_CUR);
 			continue;	
 		}
 		if(memcmp(b,g_spng_zTXt_ID,4) == 0 ){
