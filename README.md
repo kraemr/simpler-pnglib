@@ -16,7 +16,7 @@ Then you will need to include the .h files in include in your .c or .cpp files t
 
 # Code Example
 
-`
+<code>
     unsigned char  * pixel_buffer;
     struct SPNG_INFO spnginf;
     int inf =  SPNG_read("Testimage.png",&spnginf); // reads and allocates internal buffers
@@ -25,4 +25,4 @@ Then you will need to include the .h files in include in your .c or .cpp files t
     SPNG_write("out.png", &spnginf, ff); // THIS writes the given pixel data
     SPNG_exit();
     free(ff);
-`
+</code>
