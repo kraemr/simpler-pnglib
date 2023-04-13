@@ -17,13 +17,27 @@ const unsigned char g_spng_sBIT_ID[]={115,66,73,84}; //zTXt
 const unsigned char g_spng_sPLT_ID[]={115,80,76,84}; //zTXt
 const unsigned char g_spng_tIME_ID[]={116,73,77,69}; //zTXt
 const unsigned char g_spng_hIST_ID[]={104,73,83,84}; //zTXt
-const unsigned char g_spng_IHDR_ID[]={0x49,0x48,0x44,0x52};
+const unsigned char g_spng_IHDR_ID[]={0x49,0x48,0x44,0x52};// IHDR
 const unsigned char g_spng_phys_ID[]={112,72,89,115}; //pHYs
 
-
+unsigned char g_spng_iccp_allocated;
 unsigned int g_spng_crc; // global crc val
 unsigned int g_spng_bytes_rwritten;
 unsigned char g_spng_is_little_endian;
+unsigned char g_spng_bkgd[6];
+
+unsigned int g_spng_is_allocated; //keeps track if it has been Initialized by the same program
+unsigned int g_spng_plte_is_allocated; //keeps track if plte is initialized
+unsigned int g_trns_len;
+unsigned int g_spng_has_trns;
+
+struct SPNG_AUTHORINFO g_spng_author_info;
+struct SPNG_INFO g_spng_spnginf; //keeps track of the currently loaded images dimensions,bytespp,clrtype ...
+struct SPNG_PIXEL* g_spng_plte_pixels;
+unsigned int g_spng_plte_len;
+
+
+
 
 
 void spng_change_endian(unsigned int * n){
@@ -51,4 +65,23 @@ void spng_change_endian(unsigned int * n){
         SPNG_BENCH_ELAPSED = SPNG_BENCH_END - SPNG_BENCH_START;
         printf("%s:%f\n",endmsg,SPNG_BENCH_ELAPSED);
     }
+
+
+    void dump_buffer_to_file(const char* buffer, size_t buffer_size, const char* file_name) {
+    // Open the file for writing in binary mode
+    FILE* file = fopen(file_name, "wb");
+    if (!file) {
+        printf("Error: failed to open file %s for writing\n", file_name);
+        return;
+    }
+
+    // Write the contents of the buffer to the file as hex
+    for (size_t i = 0; i < buffer_size; i++) {
+        fprintf(file, "%02x ", (unsigned char)buffer[i]);
+    }
+
+    // Close the file
+    fclose(file);
+    }
+    
 #endif

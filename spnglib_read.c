@@ -1,7 +1,4 @@
 #include "include/spnglib.h"
-#include "include/globals.h"
-#include "include/zconf-ng.h"
-#include "include/zlib-ng.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,16 +7,11 @@
 
 unsigned char * g_spng_IDAT_BUFFER;
 unsigned char * g_spng_IDAT_BUFFER_unfiltered;
-unsigned int g_spng_is_allocated; //keeps track if it has been Initialized by the same program
-unsigned int g_spng_plte_is_allocated; //keeps track if plte is initialized
-unsigned int g_trns_len;
-unsigned int g_spng_has_trns;
 
-struct SPNG_INFO g_spng_spnginf; //keeps track of the currently loaded images dimensions,bytespp,clrtype ...
-struct SPNG_PIXEL* g_spng_plte_pixels;
-unsigned int g_spng_plte_len;
 
 extern void spng_change_endian(unsigned int * n);
+extern void spng_read_author_title_desc(FILE * fp,int chnklen,int iscompressed,struct SPNG_AUTHORINFO* spng_auth);
+
 // returns 1 if little endian and 0 if not 
 unsigned char spng_cpu_get_is_little_endian(){
 	int num = 1;
@@ -35,11 +27,11 @@ void spng_get_size(struct SPNG_INFO* spnginf){
 // takes in spng_info and calculates bytespp
 void spng_get_bytespp(struct SPNG_INFO* spnginf){
 	switch ((*spnginf).clr) {
-	case 6: (*spnginf).bytespp = 4;break; // RGBA
-	case 2: (*spnginf).bytespp = 3;break; // RGB
-	case 4: (*spnginf).bytespp = 2;break; // GreyAlpha
-	case 0: (*spnginf).bytespp = 1;break; // Greyscale
-	case 3: (*spnginf).bytespp = 1;break; // indexed
+	case 6: (*spnginf).bytespp = 4 * spnginf->bitdepth / 8 ;break; // RGBA
+	case 2: (*spnginf).bytespp = 3 * spnginf->bitdepth / 8;break; // RGB
+	case 4: (*spnginf).bytespp = 2 * spnginf->bitdepth / 8;break; // GreyAlpha
+	case 0: (*spnginf).bytespp = 1 * spnginf->bitdepth / 8;break; // Greyscale
+	case 3: (*spnginf).bytespp = 1 * spnginf->bitdepth / 8;break; // indexed
 	default:;
 	}
 }
@@ -63,32 +55,48 @@ void spng_read_until_IDAT(FILE * fp,struct SPNG_INFO* spnginf,unsigned char skip
 
 	unsigned char b[4];
 	unsigned int chunk_len;
+	SPNG_free_author_info(&g_spng_author_info);
+	SPNG_reset_author_info_lengths(&g_spng_author_info);
 	while(!feof(fp)){
 		fread(b,1,4,fp);
+		chunk_len=spng_chunk_length( fp);
 		if(memcmp(b, g_spng_IDAT_ID, 4)==0){
 			#ifdef SPNGLIB_DEBUG_BENCHMARK
 				spng_bench_end("read until IDAT");
 			#endif
 			return;
 		}
-		if(memcmp(b, g_spng_tIME_ID, 4) == 0 ||
+		if(memcmp(b, g_spng_tIME_ID, 4) == 0 ||memcmp(b,g_spng_iCCP_ID,4) == 0){
+			fseek(fp,chunk_len,SEEK_CUR);
+			fseek(fp,4,SEEK_CUR);
+			continue;
+
+		}
+
+		if(
 		memcmp(b,g_spng_iTXt_ID,4) == 0 ||
-		memcmp(b,g_spng_zTXt_ID,4) == 0 ||
 		memcmp(b,g_spng_tExT_ID,4) == 0) // can always occur in the file 
 		{
-			chunk_len=spng_chunk_length(fp);
-			fseek(fp,chunk_len,SEEK_CUR);
+			//fseek(fp,chunk_len,SEEK_CUR);
+			spng_read_author_title_desc(fp,chunk_len,0,&g_spng_author_info);
+			fseek(fp,4,SEEK_CUR);
+//			fseek(fp,chunk_len+4,SEEK_CUR);
+			continue;	
+		}
+		if(memcmp(b,g_spng_zTXt_ID,4) == 0 ){
+			//fseek(fp,chunk_len+4,SEEK_CUR);
+			spng_read_author_title_desc(fp,chunk_len,1,&g_spng_author_info);
+			fseek(fp,4,SEEK_CUR);
+			//fseek(fp,chunk_len+4,SEEK_CUR);
 			continue;	
 		}
 
 		if(spnginf ->clr == 3 && memcmp(b,g_spng_PLTE_ID,4) == 0){
-			chunk_len=spng_chunk_length(fp);
 			fseek(fp,chunk_len+4,SEEK_CUR);
 			continue;	
 		}
 
 		if(spnginf ->clr == 3 && memcmp(b,g_spng_TRNS_ID,4) == 0){
-			chunk_len=spng_chunk_length(fp);
 			fseek(fp,chunk_len+4,SEEK_CUR);
 			continue;	
 		}
@@ -99,15 +107,18 @@ void spng_read_until_IDAT(FILE * fp,struct SPNG_INFO* spnginf,unsigned char skip
 		memcmp(b, g_spng_sBIT_ID, 4) == 0  ||
 		memcmp(b, g_spng_sRGB_ID, 4) == 0) 
 		{
-			chunk_len=spng_chunk_length(fp);
 			fseek(fp,chunk_len+4,SEEK_CUR);
 			continue;	
 		}
-		if(memcmp(b, g_spng_bkgd_ID, 4) == 0 ||
-		memcmp(b, g_spng_hIST_ID, 4) == 0 ||
-		memcmp(b, g_spng_phys_ID, 4) == 0)
+
+		if(memcmp(b, g_spng_bkgd_ID, 4) == 0)
 		{
-			chunk_len=spng_chunk_length(fp);
+			fseek(fp,4,SEEK_CUR);
+			continue;	
+		}
+
+		if(	memcmp(b, g_spng_hIST_ID, 4) == 0 ||
+			memcmp(b, g_spng_phys_ID, 4) == 0){
 			fseek(fp,chunk_len+4,SEEK_CUR);
 			continue;	
 		}
@@ -284,9 +295,7 @@ unsigned char spng_paeth_pred(unsigned char a,  unsigned char b, unsigned char c
     return PR;
 }
 
-void spng_undo_paeth_avx2(){
-	
-}
+
 
 void spng_undo_paeth(struct SPNG_INFO* spnginf,unsigned int pos,unsigned int len_nofilter){
 	//register unsigned char a,b,c;
@@ -298,7 +307,6 @@ void spng_undo_paeth(struct SPNG_INFO* spnginf,unsigned int pos,unsigned int len
 	unsigned int bytepp = spnginf->bytespp;
 
 	for(; j<i + bytepp; j++){
-//				b = g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i];
 				g_spng_IDAT_BUFFER_unfiltered[j]+=spng_paeth_pred(0, g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i], 0);
 				last_scan_curr_i++;
 	}
@@ -306,18 +314,14 @@ void spng_undo_paeth(struct SPNG_INFO* spnginf,unsigned int pos,unsigned int len
 
 	while(i<pos+len_nofilter){
 			for(j=i;j<i+bytepp;j++){
-			//	a =g_spng_IDAT_BUFFER_unfiltered[last_block_i];
-			//	b =g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i];
-			//	c =g_spng_IDAT_BUFFER_unfiltered[last_scan_last_block_i];
 				g_spng_IDAT_BUFFER_unfiltered[j]+=spng_paeth_pred(g_spng_IDAT_BUFFER_unfiltered[last_block_i], g_spng_IDAT_BUFFER_unfiltered[last_scan_curr_i], g_spng_IDAT_BUFFER_unfiltered[last_scan_last_block_i]);
 				last_block_i++;
 				last_scan_last_block_i++;
 				last_scan_curr_i++;
 			}
-		
-	
 		i+=bytepp;
 	}
+
 }
 
 
@@ -384,11 +388,12 @@ void spng_undo_filters(struct SPNG_INFO* spnginf){
 	j=i;
 	unsigned int k =i;
 
-	for(i=0;i<buffer_size; i+=len, j+=len_nofilter){
+	for(;i<buffer_size; i+=len, j+=len_nofilter){
 	memmove(&g_spng_IDAT_BUFFER_unfiltered[i-k],&g_spng_IDAT_BUFFER_unfiltered[i+1],len_nofilter); 
 	++k;
 	// move memory of an offset of 1(skipping the filter) into the memory section of the filter
 	}
+
 	j=0;
 	i=0;
 	for(;i<spnginf->height;++i,j+=len_nofilter){
@@ -426,16 +431,24 @@ void spng_undo_filters(struct SPNG_INFO* spnginf){
 	#endif
 }
 
-void SPNG_exit(){
-	if(g_spng_is_allocated){
+void SPNG_exit(){ 
+	// if global Idat buffer is allocated(PNG was read with SPNG_read),then free it
+	if(g_spng_is_allocated){ 
 	free(g_spng_IDAT_BUFFER_unfiltered);
-	g_spng_is_allocated=0;
+	g_spng_is_allocated=0; 
 	}
+	// if an indexed image was read then free the internal buffer
 	if(g_spng_plte_is_allocated){
 	free(g_spng_plte_pixels);
 	g_spng_plte_is_allocated=0;
 	}
+	//SPNG_free_author_info(&g_spng_author_info);
+	
 }
+
+
+
+
 
 //copies the internal pixelbuffer to the given pointer reference, which will be allocated by this function
 void SPNG_get_pixels(unsigned char** pixelbuffer){
@@ -648,10 +661,8 @@ int SPNG_read(char * filename,struct SPNG_INFO* spnginf){
 	if(g_spng_is_allocated==1) free(g_spng_IDAT_BUFFER_unfiltered);
 	int inf = SPNG_get_spnginfo_from_file(filename,&g_spng_spnginf);
 	if(inf < 0) return inf;
-	
 	spng_read_IDAT(fp, &g_spng_spnginf, inf);
 	spng_undo_filters(&g_spng_spnginf);
-
 	if(g_spng_spnginf.clr == 3){
 		if(g_spng_plte_is_allocated == 1) free(g_spng_plte_pixels);
 		spng_get_plte(filename,inf);
@@ -659,5 +670,8 @@ int SPNG_read(char * filename,struct SPNG_INFO* spnginf){
 	g_spng_is_allocated=1;
 	SPNG_get_spnginfo(spnginf); 
 	fclose(fp);
+		
+
+
 	return SPNG_SUCCESS;
 }

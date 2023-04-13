@@ -1,6 +1,6 @@
 #include "include/spnglib.h"
-#include "include/zconf-ng.h"
-#include "include/zlib-ng.h"
+#include <zlib-ng.h>
+#include <zconf-ng.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +28,6 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
     zng_deflateInit(&defstream, Z_DEFLATED);
 	unsigned char * png_crc_buf;
     unsigned long bytes_written=0;
-	const unsigned char IDAT_ID[]={0x49,0x44,0x41,0x54};
     do
     {
         unsigned int have; // is also chnk length
@@ -39,13 +38,13 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
 		unsigned int Chunk_length = have;
     	Chunk_length = __builtin_bswap32(Chunk_length);
     	fwrite(&Chunk_length,1,4,fp);
-    	fwrite(IDAT_ID, 1, 4, fp);
+    	fwrite(g_spng_IDAT_ID, 1, 4, fp);
         bytes_written += fwrite(out, sizeof(char), have, fp);
         png_crc_buf = (unsigned char*)malloc(have+4);
         for(int i= 0; i < have; i++ ){
           png_crc_buf[i+4] = out[i]; 
         }
-        memcpy(&png_crc_buf[0], IDAT_ID, 4);
+        memcpy(&png_crc_buf[0], g_spng_IDAT_ID, 4);
         unsigned long  crc_val = zng_crc32(0L, Z_NULL, 0);
         crc_val = zng_crc32(crc_val, (const unsigned char*)png_crc_buf, have+4);        
         crc_val = __builtin_bswap32(crc_val);
@@ -118,14 +117,21 @@ int spng_search_plte_pixel(struct SPNG_PIXEL plte[256],unsigned char r,unsigned 
 	return -1; // doesnt exist
 }
 
+
+
+
+
 // needs a spnginf with proper width, height and clr corresponding to the passed buffer
+// return SPNG_NULL if no filename is given no input buffer or no SPNG_INFO is passed
 int SPNG_write(char * filename,struct SPNG_INFO* spnginf,unsigned char* in_pix_buf){
 	#ifdef SPNGLIB_DEBUG_BENCHMARK
 		spng_bench_start();
 	#endif
-	if(filename == NULL){
-		return -1;
+	
+	if(filename == NULL || spnginf == NULL || in_pix_buf == NULL){
+		return SPNG_NULL; 
 	}
+	
 	FILE * fp=fopen(filename,"wb");
 	spng_write_metadata(fp, spnginf);
 	unsigned int scanlinelength = spnginf->width * spnginf->bytespp+1;
@@ -206,7 +212,17 @@ int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* 
 			g = in_pix_buf[i-2];
 			b = in_pix_buf[i-1];
 			a = in_pix_buf[i];
-
+		}
+		else if(spnginf->clr == 0){
+			r = in_pix_buf[i+1];
+			g = in_pix_buf[i+1];
+			b = in_pix_buf[i+1];
+			a = 255;
+		}else{
+			r = in_pix_buf[i-1];
+			g = in_pix_buf[i-1];
+			b = in_pix_buf[i-1];
+			a = in_pix_buf[i];
 		}
 		//printf("%d\n",plte_i);
 		if(plte_i > 255){
@@ -234,15 +250,36 @@ int SPNG_write_indexed(char * filename,struct SPNG_INFO* spnginf,unsigned char* 
 			new_indexed_pixel_buffer[j] = 0;
 			j++;
 		}
-		r = in_pix_buf[i];
-		g = in_pix_buf[i+1];
-		b = in_pix_buf[i+2];
-		a = 255;
+		switch (tempclr) {
+			case 0: r= in_pix_buf[i];
+			g=r;
+			b=r;
+			a=255;
+			break;
+			case 2:
+			r= in_pix_buf[i];
+			g = in_pix_buf[i+1];
+			b = in_pix_buf[i+2];
+			a = 255;
+			break;
+			case 4:
+			r= in_pix_buf[i];
+			g = r;
+			b = r;
+			a = in_pix_buf[i+1];
+			break;
+			case 6:
+			r= in_pix_buf[i];
+			g = in_pix_buf[i+1];
+			b = in_pix_buf[i+2];
+			a = in_pix_buf[i+3];
+			break;
+		}
 		// returns an index and saves it in new indexed pixel buffer
 		new_indexed_pixel_buffer[j] = spng_search_plte_pixel(plte,r,g,b,a);
 		j++;
 	}	
-	spng_deflate(new_indexed_pixel_buffer,(spnginf->width+1), spnginf->height, 1,16384, 8, fp);
+	spng_deflate(new_indexed_pixel_buffer,(spnginf->width+1), spnginf->height, 1,4194304, 8, fp);
 	spng_write_end(fp);
 	fclose(fp);
 	free(new_indexed_pixel_buffer);
