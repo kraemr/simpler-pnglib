@@ -36,7 +36,7 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
         e = zng_deflate(&defstream, Z_FINISH);
         have = blocksize - defstream.avail_out;
 		unsigned int Chunk_length = have;
-    	Chunk_length = __builtin_bswap32(Chunk_length);
+    	if(g_spng_is_little_endian)Chunk_length = __builtin_bswap32(Chunk_length);
     	fwrite(&Chunk_length,1,4,fp);
     	fwrite(g_spng_IDAT_ID, 1, 4, fp);
         bytes_written += fwrite(out, sizeof(char), have, fp);
@@ -47,7 +47,7 @@ unsigned long spng_deflate(unsigned char *t, int ScanLineLen, int height, int by
         memcpy(&png_crc_buf[0], g_spng_IDAT_ID, 4);
         unsigned long  crc_val = zng_crc32(0L, Z_NULL, 0);
         crc_val = zng_crc32(crc_val, (const unsigned char*)png_crc_buf, have+4);        
-        crc_val = __builtin_bswap32(crc_val);
+        if(g_spng_is_little_endian)crc_val = __builtin_bswap32(crc_val);
         fwrite(&crc_val,1,4,fp);
         free(png_crc_buf);
     } while (defstream.avail_out == 0);
@@ -92,7 +92,7 @@ void SPNG_write_metadata(FILE * fp,struct SPNG_INFO* spnginf){
 	ihdr_crc_buf[16] = 0;
 	png_crc = zng_crc32(0,Z_NULL,0);
 	png_crc = zng_crc32(png_crc,ihdr_crc_buf,17);
-	png_crc = __builtin_bswap32(png_crc);
+	if(g_spng_is_little_endian)png_crc = __builtin_bswap32(png_crc);
 	fwrite(&png_crc, 1,4, fp);
 }
 
@@ -158,7 +158,7 @@ void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_siz
 	unsigned int png_crc= zng_crc32(0, Z_NULL, 0);
 	png_crc = zng_crc32(png_crc, PLTE_identifier, 4);
 	unsigned int temp_plte_size = plte_size*3;
-	temp_plte_size = (temp_plte_size >> 24) | ((temp_plte_size >> 8) & 0x0000ff00) | ((temp_plte_size<<8) & 0x00ff0000) | (temp_plte_size << 24); //change endianness
+	if(g_spng_is_little_endian)temp_plte_size = (temp_plte_size >> 24) | ((temp_plte_size >> 8) & 0x0000ff00) | ((temp_plte_size<<8) & 0x00ff0000) | (temp_plte_size << 24); //change endianness
 	fwrite(&temp_plte_size,1,4,fp);
 	fwrite(PLTE_identifier,1,4,fp);
 	for(int i =0; i< plte_size;i++){
@@ -168,7 +168,7 @@ void spng_write_plte(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int plte_siz
 		fwrite(b, 1, 3, fp);
 		png_crc = zng_crc32(png_crc, b, 3);
 	}
-	png_crc = __builtin_bswap32(png_crc);
+	if(g_spng_is_little_endian)png_crc = __builtin_bswap32(png_crc);
 	fwrite(&png_crc, 1, 4, fp);
 }
 
@@ -176,14 +176,14 @@ void spng_write_trns(FILE * fp,struct SPNG_PIXEL plte[256],unsigned int trns_siz
 	unsigned int png_crc= zng_crc32(0, Z_NULL, 0);
 	png_crc = zng_crc32(png_crc, g_spng_TRNS_ID, 4);
 	unsigned int temp_trns_size = trns_size;
-	temp_trns_size = (temp_trns_size >> 24) | ((temp_trns_size >> 8) & 0x0000ff00) | ((temp_trns_size<<8) & 0x00ff0000) | (temp_trns_size << 24); //change endianness
+	if(g_spng_is_little_endian)temp_trns_size = (temp_trns_size >> 24) | ((temp_trns_size >> 8) & 0x0000ff00) | ((temp_trns_size<<8) & 0x00ff0000) | (temp_trns_size << 24); //change endianness
 	fwrite(&temp_trns_size, 1, 4, fp);
 	fwrite(g_spng_TRNS_ID,1, 4, fp);
 	for(int i = 0; i < trns_size;i++){
 		fputc(plte[i].a,fp);
 		png_crc = zng_crc32(png_crc, &plte[i].a, 1);
 	}
-	png_crc = __builtin_bswap32(png_crc);
+	if(g_spng_is_little_endian)png_crc = __builtin_bswap32(png_crc);
 	fwrite(&png_crc, 1, 4, fp);
 }
 

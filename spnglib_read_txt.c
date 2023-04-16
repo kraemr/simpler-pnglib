@@ -152,34 +152,34 @@ void spng_parse_std_metadata(char * data,unsigned int data_len,char * keyword,st
     // also check if it is already allocced before allocing again
 
     if(strcmp(keyword, "Title") == 0){
-      spng_alloc_metadata(&spng_auth->title,&spng_auth->title_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->title,&spng_auth->title_len,data_len,data);
     }
     else if(strcmp(keyword, "Description") == 0){
-      spng_alloc_metadata(&spng_auth->description,&spng_auth->description_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->description,&spng_auth->description_len,data_len,data);
     }
     else if(strcmp(keyword, "Author") == 0){
-      spng_alloc_metadata(&spng_auth->author,&spng_auth->author_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->author,&spng_auth->author_len,data_len,data);
     }
     else if(strcmp(keyword, "Copyright") == 0){
-      spng_alloc_metadata(&spng_auth->Copyright,&spng_auth->Copyright_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Copyright,&spng_auth->Copyright_len,data_len,data);
     }
     else if(strcmp(keyword, "CreationTime") == 0){
-      spng_alloc_metadata(&spng_auth->Creation,&spng_auth->Creation_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Creation,&spng_auth->Creation_len,data_len,data);
     }
     else if(strcmp(keyword, "Software") == 0){
-      spng_alloc_metadata(&spng_auth->Software,&spng_auth->Software_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Software,&spng_auth->Software_len,data_len,data);
     }
     else if(strcmp(keyword, "Disclaimer") == 0){
-      spng_alloc_metadata(&spng_auth->Disclaimer,&spng_auth->Disclaimer_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Disclaimer,&spng_auth->Disclaimer_len,data_len,data);
     }
     else if(strcmp(keyword, "Warning") == 0){
-          spng_alloc_metadata(&spng_auth->Warning,&spng_auth->Warning_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Warning,&spng_auth->Warning_len,data_len,data);
     }
     else if(strcmp(keyword, "Source") == 0){
-          spng_alloc_metadata(&spng_auth->Source,&spng_auth->Source_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Source,&spng_auth->Source_len,data_len,data);
     }
     else if(strcmp(keyword, "Comment") == 0){
-      spng_alloc_metadata(&spng_auth->Comment,&spng_auth->Comment_len,data_len,data);
+        spng_alloc_metadata(&spng_auth->Comment,&spng_auth->Comment_len,data_len,data);
     }
 }
 

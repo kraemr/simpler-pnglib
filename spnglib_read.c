@@ -37,11 +37,12 @@ void spng_get_bytespp(struct SPNG_INFO* spnginf){
 }
 
 unsigned int spng_chunk_length(FILE * fp){
+	g_spng_is_little_endian = spng_cpu_get_is_little_endian();
 	fseek(fp, -8, SEEK_CUR);
 	unsigned int size = 0;
 	fread(&size,1,4,fp);
 	fseek(fp,4,SEEK_CUR);
-	spng_change_endian(&size);
+	if(g_spng_is_little_endian)spng_change_endian(&size);
 	return size;
 }
 
@@ -196,9 +197,9 @@ int SPNG_get_spnginfo_from_file(char * filename,struct SPNG_INFO* spnginf){
 	fread(&len , 1, 4, fp); // chunk len
 	fseek(fp,4,SEEK_CUR); // return to id
 	fread( &(*spnginf).width,1,4,fp);// read width (Big Endian)
-	spng_change_endian(&(*spnginf).width); // Convert to little endian
+	if(g_spng_is_little_endian)spng_change_endian(&(*spnginf).width); // Convert to little endian
 	fread( &(*spnginf).height,1,4,fp);// read height (Big Endian)
-	spng_change_endian(&(*spnginf).height);// Convert to little endian
+	if(g_spng_is_little_endian)spng_change_endian(&(*spnginf).height);// Convert to little endian
 	fread( (&(*spnginf).bitdepth),1,1,fp);
 	fread( (&(*spnginf).clr ),1,1,fp);
 	spng_get_bytespp(spnginf);
@@ -655,6 +656,7 @@ void SPNG_get_pixels_greyscale(struct SPNG_INFO* spnginf,unsigned char** pixelbu
 }
 
 int SPNG_read(char * filename,struct SPNG_INFO* spnginf){
+	g_spng_is_little_endian = spng_cpu_get_is_little_endian();
 	if(filename == NULL) return SPNG_FILE_NOT_FOUND;
 	FILE * fp = fopen(filename,"rb");
 	if(fp == NULL)return SPNG_FILE_NOT_FOUND;

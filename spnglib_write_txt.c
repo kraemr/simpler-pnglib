@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 int spng_deflate_txt(FILE * fp,char * data,unsigned char * dest_buf,int* data_len){
     if(fp == NULL) return SPNG_NULL;
     const size_t CHUNK_SIZE = 16384;
@@ -24,7 +23,6 @@ int spng_deflate_txt(FILE * fp,char * data,unsigned char * dest_buf,int* data_le
     return Z_OK;
 }
 
-
 // Writes a given keyword and its data after also writing the chunk id
 int spng_write_keyword_data(FILE * fp,const unsigned char* ID,char * keyword,int keyword_len,char * data,int data_len,unsigned char should_be_compressed){
     if(fp == NULL) return SPNG_NULL;
@@ -32,7 +30,8 @@ int spng_write_keyword_data(FILE * fp,const unsigned char* ID,char * keyword,int
     if(should_be_compressed){
         unsigned char dest_buf[16384];
         spng_deflate_txt(fp,data,dest_buf,&data_len);
-        temp_len = __builtin_bswap32(data_len+keyword_len+1);
+        temp_len = data_len+keyword_len+1;
+        if(g_spng_is_little_endian)temp_len = __builtin_bswap32(temp_len);
         fwrite(&temp_len,1,4,fp);
         fwrite(ID,1,4,fp);
         fwrite(keyword,1,keyword_len,fp );
@@ -42,11 +41,12 @@ int spng_write_keyword_data(FILE * fp,const unsigned char* ID,char * keyword,int
         g_spng_crc = zng_crc32(g_spng_crc, keyword, keyword_len);
         g_spng_crc = zng_crc32(g_spng_crc, '\0', 1);
         g_spng_crc = zng_crc32(g_spng_crc, dest_buf, data_len);
-        g_spng_crc = __builtin_bswap32(g_spng_crc);
+        if(g_spng_is_little_endian)g_spng_crc = __builtin_bswap32(g_spng_crc);
         fwrite(&g_spng_crc,1,4,fp);
     }    
     else{
-        temp_len = __builtin_bswap32(data_len+keyword_len+1);
+        temp_len = data_len+keyword_len+1;
+        if(g_spng_is_little_endian)temp_len = __builtin_bswap32(temp_len);
         fwrite(&temp_len,1,4,fp);
         fwrite(ID,1,4,fp);
         fwrite(keyword,1,keyword_len,fp );
@@ -56,13 +56,11 @@ int spng_write_keyword_data(FILE * fp,const unsigned char* ID,char * keyword,int
         g_spng_crc = zng_crc32(g_spng_crc, '\0', 1);
         fwrite(data,1,data_len,fp);
         g_spng_crc = zng_crc32(g_spng_crc, data, data_len);
-        g_spng_crc = __builtin_bswap32(g_spng_crc);
+        if(g_spng_is_little_endian) g_spng_crc = __builtin_bswap32(g_spng_crc);
         fwrite(&g_spng_crc,1,4,fp);
     }
     return 1;
 }
-
-
 
 int SPNG_write_authorinfo(FILE * fp,struct SPNG_AUTHORINFO spngauthinf){
     if(fp == NULL) return SPNG_NULL;
