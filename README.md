@@ -4,7 +4,7 @@ is a rewrite of my simple-pnglib in c which will be faster and simpler to use
 # How to use
 
 First clone the repo with submodule
-`git clone --recurse-submodules https://github.com/kraemr/simpler-pnglib/.git`
+`git clone --recurse-submodules https://github.com/kraemr/simpler-pnglib`
 
 
 Then cd into it
