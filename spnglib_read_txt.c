@@ -82,46 +82,46 @@ void SPNG_free_author_info(struct SPNG_AUTHORINFO* info) {
 void SPNG_get_Authorinfo(struct SPNG_AUTHORINFO* dest){
     SPNG_reset_author_info_lengths(dest);
     if (g_spng_author_info.author != NULL) {
-        dest->author = malloc(g_spng_author_info.author_len + 1);
+        dest->author = (char *)malloc(g_spng_author_info.author_len + 1);
         dest->author_len = g_spng_author_info.author_len;
         memcpy(dest->author, g_spng_author_info.author, g_spng_author_info.author_len + 1);
     }
     if (g_spng_author_info.title != NULL) {
-        dest->title = malloc(g_spng_author_info.title_len + 1);
+        dest->title = (char *)malloc(g_spng_author_info.title_len + 1);
         dest->title_len = g_spng_author_info.title_len;
         memcpy(dest->title, g_spng_author_info.title, g_spng_author_info.title_len + 1);
     }
     if (g_spng_author_info.description != NULL) {
-        dest->description = malloc(g_spng_author_info.description_len + 1);
+        dest->description = (char *)malloc(g_spng_author_info.description_len + 1);
         dest->description_len = g_spng_author_info.description_len;
         memcpy(dest->description, g_spng_author_info.description, g_spng_author_info.description_len + 1);
     }
     if (g_spng_author_info.Copyright != NULL) {
-        dest->Copyright = malloc(g_spng_author_info.Copyright_len + 1);
+        dest->Copyright = (char *)malloc(g_spng_author_info.Copyright_len + 1);
         memcpy(dest->Copyright, g_spng_author_info.Copyright, g_spng_author_info.Copyright_len + 1);
     }
     if (g_spng_author_info.Creation != NULL) {
-        dest->Creation = malloc(g_spng_author_info.Creation_len + 1);
+        dest->Creation = (char *)malloc(g_spng_author_info.Creation_len + 1);
         memcpy(dest->Creation, g_spng_author_info.Creation, g_spng_author_info.Creation_len + 1);
     }
     if (g_spng_author_info.Software != NULL) {
-        dest->Software = malloc(g_spng_author_info.Software_len + 1);
+        dest->Software = (char *)malloc(g_spng_author_info.Software_len + 1);
         memcpy(dest->Software, g_spng_author_info.Software, g_spng_author_info.Software_len + 1);
     }
     if (g_spng_author_info.Disclaimer != NULL) {
-        dest->Disclaimer = malloc(g_spng_author_info.Disclaimer_len + 1);
+        dest->Disclaimer =(char *) malloc(g_spng_author_info.Disclaimer_len + 1);
         memcpy(dest->Disclaimer, g_spng_author_info.Disclaimer, g_spng_author_info.Disclaimer_len + 1);
     }
     if (g_spng_author_info.Warning != NULL) {
-        dest->Warning = malloc(g_spng_author_info.Warning_len + 1);
+        dest->Warning = (char *)malloc(g_spng_author_info.Warning_len + 1);
         memcpy(dest->Warning, g_spng_author_info.Warning, g_spng_author_info.Warning_len + 1);
     }
     if (g_spng_author_info.Source != NULL) {
-        dest->Source = malloc(g_spng_author_info.Source_len + 1);
+        dest->Source = (char *)malloc(g_spng_author_info.Source_len + 1);
         memcpy(dest->Source, g_spng_author_info.Source, g_spng_author_info.Source_len + 1);
     }
     if (g_spng_author_info.Comment != NULL) {
-        dest->Comment = malloc(g_spng_author_info.Comment_len + 1);
+        dest->Comment =(char *) malloc(g_spng_author_info.Comment_len + 1);
         memcpy(dest->Comment, g_spng_author_info.Comment, g_spng_author_info.Comment_len + 1);
     }
 }
@@ -185,7 +185,7 @@ void spng_parse_std_metadata(char * data,unsigned int data_len,char * keyword,st
 
 void spng_read_author_title_desc(FILE * fp,int chnklen,int iscompressed,struct SPNG_AUTHORINFO* spng_auth){
     unsigned char buffer[chnklen];
-    unsigned char* ztxt_buffer = malloc(16384);
+    unsigned char* ztxt_buffer = (unsigned char *)malloc(16384);
     unsigned char ztxt_alloced=0;
     fread(buffer,1,chnklen,fp);
     if(iscompressed){
@@ -198,7 +198,7 @@ void spng_read_author_title_desc(FILE * fp,int chnklen,int iscompressed,struct S
         t[i] = '\0';
         memcpy(t, buffer,i);
         int c = spng_deflate_ztxt( &buffer[i+2],ztxt_buffer,chnklen-i+2,&outlen);
-        spng_parse_std_metadata(ztxt_buffer,outlen,t,spng_auth);
+        spng_parse_std_metadata((char *)ztxt_buffer,outlen,t,spng_auth);
     }else{
         int i = 0;
         char  t[82];

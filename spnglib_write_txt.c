@@ -1,4 +1,5 @@
 #include "include/spnglib.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,9 +39,9 @@ int spng_write_keyword_data(FILE * fp,const unsigned char* ID,char * keyword,int
         fputc('\0',fp);
         fwrite(dest_buf,1,data_len,fp);
         g_spng_crc = zng_crc32(0L, Z_NULL, 0L);
-        g_spng_crc = zng_crc32(g_spng_crc, keyword, keyword_len);
-        g_spng_crc = zng_crc32(g_spng_crc, '\0', 1);
-        g_spng_crc = zng_crc32(g_spng_crc, dest_buf, data_len);
+        g_spng_crc = zng_crc32(g_spng_crc, (const uint8_t*)keyword, keyword_len);
+        g_spng_crc = zng_crc32(g_spng_crc, (const uint8_t*)'\0', 1);
+        g_spng_crc = zng_crc32(g_spng_crc, (const uint8_t*)dest_buf, data_len);
         if(g_spng_is_little_endian)g_spng_crc = __builtin_bswap32(g_spng_crc);
         fwrite(&g_spng_crc,1,4,fp);
     }    
@@ -52,10 +53,10 @@ int spng_write_keyword_data(FILE * fp,const unsigned char* ID,char * keyword,int
         fwrite(keyword,1,keyword_len,fp );
         fputc('\0',fp);
         g_spng_crc = zng_crc32(0L, Z_NULL, 0L);
-        g_spng_crc = zng_crc32(g_spng_crc, keyword, keyword_len);
-        g_spng_crc = zng_crc32(g_spng_crc, '\0', 1);
+        g_spng_crc = zng_crc32(g_spng_crc, (const uint8_t*)keyword, keyword_len);
+        g_spng_crc = zng_crc32(g_spng_crc, (const uint8_t*)'\0', 1);
         fwrite(data,1,data_len,fp);
-        g_spng_crc = zng_crc32(g_spng_crc, data, data_len);
+        g_spng_crc = zng_crc32(g_spng_crc, (const uint8_t*)data, data_len);
         if(g_spng_is_little_endian) g_spng_crc = __builtin_bswap32(g_spng_crc);
         fwrite(&g_spng_crc,1,4,fp);
     }

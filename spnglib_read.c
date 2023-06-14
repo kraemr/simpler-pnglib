@@ -127,7 +127,7 @@ void spng_read_until_IDAT(FILE * fp,struct SPNG_INFO* spnginf,unsigned char skip
 }
 
 void spng_inflate_ng(unsigned int size,struct SPNG_INFO* spnginf){
-	g_spng_IDAT_BUFFER_unfiltered = malloc((spnginf->bytespp * spnginf->width+1) * spnginf->height);
+	g_spng_IDAT_BUFFER_unfiltered = (unsigned char *)malloc((spnginf->bytespp * spnginf->width+1) * spnginf->height);
 	zng_stream stream;
     stream.zalloc = Z_NULL;
     stream.zfree = Z_NULL;
@@ -263,8 +263,8 @@ void spng_get_plte(char * fname,int fpos){
         }
     }
 	g_spng_bytes_rwritten = fread(trns_buffer,1,len,fp);
-	register unsigned int trns_i = 0;
-	register unsigned int plte_i=0;
+	unsigned int trns_i = 0;
+	unsigned int plte_i=0;
 	unsigned int g_spng_end = g_spng_plte_len * 3;
 	for(unsigned int i = 2; i < g_spng_end;i+=3){
 		g_spng_plte_pixels[plte_i].r = plte_buffer[i-2];
@@ -285,7 +285,7 @@ void spng_get_plte(char * fname,int fpos){
 
 // used to predict next pixel 
 unsigned char spng_paeth_pred(unsigned char a,  unsigned char b, unsigned char c){
-    register int  p =a + b - c;
+    int  p =a + b - c;
     int pa = abs(p - a);
     int  pb = abs(p - b);
     int pc = abs(p - c);
@@ -473,11 +473,11 @@ void SPNG_get_pixels_srgb(struct SPNG_INFO* spnginf,unsigned char** pixelbuffer,
 	}
 
 	if(withAlpha){
-		(*pixelbuffer)= malloc(g_spng_spnginf.width * g_spng_spnginf.height* 4);
+		(*pixelbuffer)= (unsigned char *)malloc(g_spng_spnginf.width * g_spng_spnginf.height* 4);
 		spnginf->bytespp = 4;
 		spnginf->clr = 6;
 	}else{
-		(*pixelbuffer)= malloc(g_spng_spnginf.width * g_spng_spnginf.height* 3);
+		(*pixelbuffer)= (unsigned char *)malloc(g_spng_spnginf.width * g_spng_spnginf.height* 3);
 		spnginf->bytespp = 3;		
 		spnginf->clr = 2;
 	}
