@@ -14,7 +14,7 @@ compile zlib-ng with cmake and make
 then use the compiled zlib-ng with your cmake or g++
 <code>
 g++ yourfile.cpp simpler-pnglib/*.c libz-ng.a
-gcc yourfile.c
+gcc yourfile.c simpler-pnglib/*.c libz-ng.a
 </code>
 # Code Example
 
