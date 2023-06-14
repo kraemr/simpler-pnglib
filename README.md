@@ -10,10 +10,12 @@ First clone the repo with submodule
 Then cd into it
 `cd simpler-pnglib`
 
-Then execute either setup_linux.sh or setup_windows.bat
-The resulting static libraries will be in the build folder
-Then you will need to include the .h files in include in your .c or .cpp files to use the library and of course you will need to link with them as well
-
+compile zlib-ng with cmake and make
+then use the compiled zlib-ng with your cmake or g++
+<code>
+g++ yourfile.cpp simpler-pnglib/*.c libz-ng.a
+gcc yourfile.c
+</code>
 # Code Example
 
 <code>
